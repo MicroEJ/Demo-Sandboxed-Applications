@@ -1,0 +1,4 @@
+name=MQTT Data publisher
+entryPoint=com.microej.demo.sandbox.publisher.MqttPublisherEntryPoint
+types=* 
+version=1.0.0

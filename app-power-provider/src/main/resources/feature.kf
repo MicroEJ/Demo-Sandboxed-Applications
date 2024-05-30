@@ -1,0 +1,4 @@
+name=PowerProvider
+entryPoint=com.microej.demo.sandbox.provider.PowerProviderEntryPoint
+types=* 
+version=1.0.0

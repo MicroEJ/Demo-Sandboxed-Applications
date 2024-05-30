@@ -1,0 +1,11 @@
+target~
+bin
+src-adpgenerated
+/com.microej.*/
+
+# Used by sonar
+.scannerwork/
+
+# Used by some merge tools for backup
+*.bak
+*.orig

@@ -1,0 +1,16 @@
+target~
+bin
+src-adpgenerated
+/com.microej.*/
+/launchers/*.properties
+
+# Used to launch sim with multiple applications
+/applications/
+/app-dropins/*.wpk
+
+# Used by sonar
+.scannerwork/
+
+# Used by some merge tools for backup
+*.bak
+*.orig

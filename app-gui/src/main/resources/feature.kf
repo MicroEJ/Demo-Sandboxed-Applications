@@ -1,0 +1,4 @@
+name=UI Gauge Visualizer
+entryPoint=com.microej.demo.sandbox.ui.GuiEntryPoint
+types=* 
+version=1.0.0
