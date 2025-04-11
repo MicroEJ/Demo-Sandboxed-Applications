@@ -1,7 +1,7 @@
 /*
  * Java
  *
- * Copyright 2023 MicroEJ Corp. All rights reserved.
+ * Copyright 2023-2024 MicroEJ Corp. All rights reserved.
  * Use of this source code is governed by a BSD-style license that can be found with this software.
  */
 package com.microej.demo.sandbox.sharedinterface;
@@ -49,7 +49,7 @@ public class PowerServiceProxy extends Proxy<PowerService> implements PowerServi
 	}
 
 	@Override
-	public void notifyObservers() {
+	public void notifyListeners() {
 		try {
 			invoke();
 		} catch (Throwable e) {
@@ -58,7 +58,7 @@ public class PowerServiceProxy extends Proxy<PowerService> implements PowerServi
 	}
 
 	@Override
-	public void addObserver(Observer observer) {
+	public void addListener(PowerServiceListener listener) {
 		try {
 			invoke();
 		} catch (Throwable e) {
@@ -67,7 +67,7 @@ public class PowerServiceProxy extends Proxy<PowerService> implements PowerServi
 	}
 
 	@Override
-	public void removeObserver(Observer observer) {
+	public void removeListener(PowerServiceListener listener) {
 		try {
 			invoke();
 		} catch (Throwable e) {

@@ -1,29 +1,28 @@
 /*
  * Java
  *
- * Copyright 2015-2024 MicroEJ Corp. All rights reserved.
+ * Copyright 2015-2025 MicroEJ Corp. All rights reserved.
  * Use of this source code is governed by a BSD-style license that can be found with this software.
  */
 package com.microej.demo.sandbox.ui.widget;
 
+import com.microej.demo.sandbox.ui.UI;
 import ej.annotation.Nullable;
 import ej.basictool.ThreadUtils;
 import ej.bon.XMath;
 import ej.drawing.ShapePainter;
 import ej.drawing.ShapePainter.Cap;
-import ej.microui.display.Font;
-import ej.microui.display.GraphicsContext;
-import ej.microui.display.Painter;
-import ej.microui.display.ResourceImage;
+import ej.microui.display.*;
 import ej.motion.Motion;
 import ej.motion.quad.QuadEaseInOutFunction;
 import ej.mwt.Widget;
 import ej.mwt.style.Style;
 import ej.mwt.util.Alignment;
 import ej.mwt.util.Size;
-import ej.widget.util.motion.MotionAnimation;
-import ej.widget.util.motion.MotionAnimationListener;
-import ej.widget.util.render.StringPainter;
+import ej.widget.color.GradientHelper;
+import ej.widget.motion.MotionAnimation;
+import ej.widget.motion.MotionAnimationListener;
+import ej.widget.render.StringPainter;
 
 /**
  * Dynamic Gauge Widget.
@@ -31,23 +30,20 @@ import ej.widget.util.render.StringPainter;
 public class GaugeWidget extends Widget implements MotionAnimationListener {
 
 	/** Style ID for the progress highlight color. */
-	public static final int STYLE_COLOR_PROGRESS = 0;
-	/** Style ID for the progress background color. */
-	public static final int STYLE_COLOR_PROGRESS_BG = 1;
-	/** Style ID for the color of the unit label. */
-	public static final int STYLE_COLOR_UNIT_LABEL = 2;
+	public static final int STYLE_COLOR_PROGRESS_MIN = 0;
 	/** Style ID for the color of the unit icon. */
-	public static final int STYLE_COLOR_UNIT_ICON = 3;
+	public static final int STYLE_COLOR_PROGRESS_MID = 1;
 	/** Style ID for the color of the arc labels. */
-	public static final int STYLE_COLOR_ARC_LABELS = 4;
-
+	public static final int STYLE_COLOR_PROGRESS_MAX = 2;
+	/** Style ID for the progress background color. */
+	public static final int STYLE_COLOR_PROGRESS_BG = 3;
+	/** Style ID for the color of the unit label. */
+	public static final int STYLE_COLOR_UNIT_LABEL = 4;
 	/** Style ID for the font of the unit label. */
 	public static final int STYLE_FONT_UNIT_LABEL = 5;
 	/** Style ID for the font of the arc labels. */
 	public static final int STYLE_FONT_ARC_LABELS = 6;
 
-	// Default style values
-	private static final int DEFAULT_PROGRESS_COLOR = 0xE91C73;
 	private static final int DEFAULT_PROGRESS_BG_COLOR = 0x382349;
 
 	// Animation
@@ -83,6 +79,8 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 	 */
 	private static final float OFFSET_CENTRE_DIVIDER = 1.72f;
 
+	private static final float WIDGET_RATIO = 1.16f;
+
 	/** Fade size used for the circle arcs. */
 	private static final int FADE = 1;
 	/** Fade size for short lines. */
@@ -90,9 +88,9 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 	/** Fade size for long lines. */
 	private static final int FADE_LONG_LINE = 1;
 
-	private static final int OUTER_ARC_THICKNESS = 4;
-	private static final int INNER_ARC_THICKNESS = 2;
-	private static final int LINE_THICKNESS = 1;
+	private static final int OUTER_ARC_THICKNESS = UI.isLowResolution() ? 4 : 8;
+	private static final int INNER_ARC_THICKNESS = UI.isLowResolution() ? 2 : 4;
+	private static final int LINE_THICKNESS = UI.isLowResolution() ? 1 : 2;
 
 	/** Distance between outer circle inside and inner circle outside in pixel. */
 	private static final int INNER_OUTER_ARC_DISTANCE = 10;
@@ -101,14 +99,9 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 	private static final int LINE_SHORT_LENGTH = 6;
 	private static final int LINE_LONG_LENGTH = 12;
 	/** Distance between the end of a long line and the centre of the associated label. */
-	private static final int LINE_LABEL_DISTANCE = 18;
+	private static final int LINE_LABEL_DISTANCE = UI.isLowResolution() ? 18 : 30;
 
 	private static final Cap CAP = Cap.ROUNDED;
-
-	/** Reduces the top of the background drawn for the main label to adjust for fonts with empty space. */
-	private static final int MAIN_LABEL_BG_TOP_OFFSET = 10;
-	/** Reduces the bottom of the background drawn for the main label to adjust for fonts with empty space. */
-	private static final int MAIN_LABEL_BG_BOTTOM_OFFSET = 10;
 
 	// Offsets
 	/*
@@ -146,6 +139,9 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 
 	@Nullable
 	private DrawParameters drawParam;
+
+	@Nullable
+	private BufferedImage cachedDrawings;
 
 	/**
 	 * Creates the GaugeWidget without an specified direction.
@@ -210,9 +206,12 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 	 *            the maximum value to set.
 	 */
 	public void setMinMax(int minValue, int maxValue) {
-		this.minValue = minValue;
-		this.maxValue = maxValue;
-		this.drawParam = null; // Reset drawParam to re-render arc labels.
+		if (this.minValue != minValue || this.maxValue != maxValue) {
+			this.cachedDrawings.close();
+			this.cachedDrawings = null; // Reset cachedDrawings to re-render arc labels.
+			this.minValue = minValue;
+			this.maxValue = maxValue;
+		}
 	}
 
 	/**
@@ -312,57 +311,29 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 			icon.close();
 			this.unitIcon = null;
 		}
+
+		ResourceImage cachedDrawings = this.cachedDrawings;
+		if (cachedDrawings != null) {
+			cachedDrawings.close();
+			this.cachedDrawings = null;
+		}
 	}
 
 	@Override
 	protected void computeContentOptimalSize(Size size) {
-		int minWidth = 0;
-		int minHeight = 0;
+		int widthSize = size.getWidth();
+		int heightSize = size.getHeight();
 
-		Style style = getStyle();
-
-		Font mainFont = style.getFont();
-		Font arcFont = style.getExtraObject(STYLE_FONT_ARC_LABELS, Font.class, mainFont);
-		Font unitFont = style.getExtraObject(STYLE_FONT_UNIT_LABEL, Font.class, mainFont);
-
-		String maxValueString = Integer.toString(this.maxValue);
-
-		// The outer arc size (including fade on the inner and outer side of the arc line)
-		minWidth += OUTER_ARC_THICKNESS + FADE * 2;
-		minWidth += INNER_OUTER_ARC_DISTANCE;
-		// The inner arc size (including fade on the inner and outer side of the arc line)
-		minWidth += INNER_ARC_THICKNESS + FADE * 2;
-		// The longer lines length and only one fade, since the other fade overlaps with the inner arc.
-		minWidth += LINE_LONG_LENGTH + FADE_LONG_LINE;
-		// The distance between the long lines and and the centre of the label + half the size of the label.
-		minWidth += LINE_LABEL_DISTANCE + (arcFont.stringWidth(maxValueString) / 2);
-		// Mirror the same on the other side.
-		minWidth = minWidth * 2;
-		// Add the space for the centre value or unit label, depending on which is longer.
-		minWidth += XMath.max(mainFont.stringWidth(maxValueString), unitFont.stringWidth(this.unit));
-		size.setWidth(minWidth);
-
-		// The outer arc size (including fade on the inner and outer side of the arc line)
-		minHeight += OUTER_ARC_THICKNESS + FADE * 2;
-		minHeight += INNER_OUTER_ARC_DISTANCE;
-		// The inner arc size (including fade on the inner and outer side of the arc line)
-		minHeight += INNER_ARC_THICKNESS + FADE * 2;
-		// The longer lines length and only one fade, since the other fade overlaps with the inner arc.
-		minHeight += LINE_LONG_LENGTH + FADE_LONG_LINE;
-		// The distance between the long lines and and the centre of the label + half the size of the label.
-		minHeight += LINE_LABEL_DISTANCE + (arcFont.getHeight() / 2);
-		// Add the value and unit label in the centre.
-		minHeight += mainFont.getHeight();
-		minHeight += unitFont.getHeight();
-		// If we have an unit icon, take it's height into account.
-		ResourceImage icon = this.unitIcon;
-		if (icon != null) {
-			minHeight += icon.getHeight();
+		if (widthSize < heightSize) {
+			heightSize = (int)(widthSize / WIDGET_RATIO);
+		} else {
+			widthSize = (int)(heightSize * WIDGET_RATIO);
 		}
-		size.setHeight(minHeight);
 
-		// Reset draw parameter after changing size.
-		this.drawParam = null;
+		size.setSize(widthSize, heightSize);
+
+		// Reset cache after changing size.
+		this.cachedDrawings = null;
 	}
 
 	@Override
@@ -370,13 +341,8 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 		Style style = getStyle();
 		assert style != null;
 		Size contentSize = new Size(getWidth(), getHeight());
+		// Apply only the outlines but do not draw the background
 		style.getMargin().apply(g, contentSize);
-		// Only apply the background the first time so we do not overwrite the drawn gauge label.
-		// This will have a better drawing performance for animations, since the labels will not have to be re-drawn
-		// every time.
-		if (this.drawParam == null) {
-			style.getBackground().apply(g, contentSize.getWidth(), contentSize.getHeight());
-		}
 		style.getBorder().apply(g, contentSize);
 		style.getPadding().apply(g, contentSize);
 		try {
@@ -393,85 +359,76 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 
 		int valueColor = style.getColor();
 
-		int progressColor = style.getExtraInt(STYLE_COLOR_PROGRESS, DEFAULT_PROGRESS_COLOR);
-		int progressBgColor = style.getExtraInt(STYLE_COLOR_PROGRESS_BG, DEFAULT_PROGRESS_BG_COLOR);
+		int minGradientColor = style.getExtraInt(STYLE_COLOR_PROGRESS_MIN, valueColor);
+		int midGradientColor = style.getExtraInt(STYLE_COLOR_PROGRESS_MID, valueColor);
+		int maxGradientColor = style.getExtraInt(STYLE_COLOR_PROGRESS_MAX, valueColor);
+		int progressColor;
 
-		int unitLabelColor = style.getExtraInt(STYLE_COLOR_UNIT_LABEL, valueColor);
-		int unitIconColor = style.getExtraInt(STYLE_COLOR_UNIT_LABEL, progressColor);
-
-		int arcLabelColor = style.getExtraInt(STYLE_COLOR_ARC_LABELS, progressBgColor);
-
-		Font mainFont = style.getFont();
-		Font arcFont = style.getExtraObject(STYLE_FONT_ARC_LABELS, Font.class, mainFont);
-		Font unitFont = style.getExtraObject(STYLE_FONT_UNIT_LABEL, Font.class, mainFont);
-
-		DrawParameters param = this.drawParam;
-		if (param == null) {
-			// Calculate required positions
-			int offsetHeight = (int) (contentHeight / OFFSET_CENTRE_DIVIDER);
-			int radius = offsetHeight;
-			int yDiff = offsetHeight - contentHeight / 2;
-			int diameter = radius * 2;
-			if (contentWidth < contentHeight || contentWidth < diameter) {
-				offsetHeight = (int) (contentWidth / OFFSET_CENTRE_DIVIDER);
-				radius = contentWidth / 2;
-				diameter = radius * 2;
-				yDiff = offsetHeight - contentWidth / 2;
-			}
-
-			int xPos = Alignment.computeLeftX(diameter, 0, contentWidth, style.getHorizontalAlignment());
-			int yPos = Alignment.computeTopY(XMath.min(diameter - yDiff, contentHeight), 0, contentHeight,
-					style.getVerticalAlignment());
-
-			int xCenterAligned = xPos + radius;
-			int yCenterAligned = yPos + radius;
-
-			ArcParameter outer = new ArcParameter(radius - OUTER_ARC_OFFSET, xPos + OUTER_ARC_OFFSET,
-					yPos + OUTER_ARC_OFFSET);
-
-			ArcParameter inner = new ArcParameter(radius - INNER_ARC_OFFSET, xPos + INNER_ARC_OFFSET,
-					yPos + INNER_ARC_OFFSET);
-
-			ArcParameter lineStart = new ArcParameter(inner.getRadius() - FADE, inner.getXOffset() + FADE,
-					inner.getYOffset() + FADE);
-			ArcParameter lineShort = new ArcParameter(radius - LINE_SHORT_ARC_OFFSET, xPos + LINE_SHORT_ARC_OFFSET,
-					yPos + LINE_SHORT_ARC_OFFSET);
-			ArcParameter lineLong = new ArcParameter(radius - LINE_LONG_ARC_OFFSET, xPos + LINE_LONG_ARC_OFFSET,
-					yPos + LINE_LONG_ARC_OFFSET);
-			ArcParameter lineLabel = new ArcParameter(radius - LINE_LABEL_ARC_OFFSET, xPos + LINE_LABEL_ARC_OFFSET,
-					yPos + LINE_LABEL_ARC_OFFSET);
-
-			param = new DrawParameters(xCenterAligned, yCenterAligned, outer, inner, lineStart, lineShort, lineLong,
-					lineLabel);
-			this.drawParam = param;
-
-			// Draw inner Arc, lines on inner Arc and labels for long line.
-			renderInnerArc(g, param, arcFont, progressBgColor, arcLabelColor);
-
-			// Draw unit label & icon
-			renderUnit(g, param, unitFont, unitLabelColor, unitIconColor);
-		}
-
-		// Draw outer arc background
-		ArcParameter outer = param.outer;
-
-		g.setColor(progressBgColor);
-		ShapePainter.drawThickFadedCircleArc(g, outer.getXOffset(), outer.getYOffset(), outer.getDiameter(),
-				START_ANGLE, ARC_ANGLE, OUTER_ARC_THICKNESS, FADE, CAP, CAP);
-
-		// Draw value
+		// Draw value of the gauge
 		int drawValue = this.value;
 		if (this.motionAnimation != null) {
 			drawValue = this.animValue / ANIMATION_FACTOR;
 		}
 
+		// Compute the ratio of the color gradient
+		float ratio = drawValue / ((float) this.maxValue - (float) this.minValue);
+
+		// Determine @progressColor depending on the Power value
+		if(ratio < 0.5f){
+			progressColor = GradientHelper.blendColors(minGradientColor, midGradientColor, ratio*2f);
+		} else {
+			progressColor = GradientHelper.blendColors(midGradientColor, maxGradientColor, ratio * 2f - 1f);
+		}
+
+		int unitLabelColor = style.getExtraInt(STYLE_COLOR_UNIT_LABEL, valueColor);
+
+		Font mainFont = style.getFont();
+
+		// Calculate required positions
+		int offsetHeight = (int) (contentHeight / OFFSET_CENTRE_DIVIDER);
+		int radius = offsetHeight;
+		int yDiff = offsetHeight - contentHeight / 2;
+		int diameter = radius * 2;
+		if (contentWidth < contentHeight || contentWidth < diameter) {
+			offsetHeight = (int) (contentWidth / OFFSET_CENTRE_DIVIDER);
+			radius = contentWidth / 2;
+			diameter = radius * 2;
+			yDiff = offsetHeight - contentWidth / 2;
+		}
+
+		int xPos = Alignment.computeLeftX(diameter, 0, contentWidth, style.getHorizontalAlignment());
+		int yPos = Alignment.computeTopY(XMath.min(diameter - yDiff, contentHeight), 0, contentHeight,
+				style.getVerticalAlignment());
+
+		int xCenterAligned = xPos + radius;
+		int yCenterAligned = yPos + radius;
+
+		ArcParameter outer = new ArcParameter(radius - OUTER_ARC_OFFSET, xPos + OUTER_ARC_OFFSET,
+				yPos + OUTER_ARC_OFFSET);
+
+		ArcParameter inner = new ArcParameter(radius - INNER_ARC_OFFSET, xPos + INNER_ARC_OFFSET,
+				yPos + INNER_ARC_OFFSET);
+
+		ArcParameter lineStart = new ArcParameter(inner.getRadius() - FADE, inner.getXOffset() + FADE,
+				inner.getYOffset() + FADE);
+		ArcParameter lineShort = new ArcParameter(radius - LINE_SHORT_ARC_OFFSET, xPos + LINE_SHORT_ARC_OFFSET,
+				yPos + LINE_SHORT_ARC_OFFSET);
+		ArcParameter lineLong = new ArcParameter(radius - LINE_LONG_ARC_OFFSET, xPos + LINE_LONG_ARC_OFFSET,
+				yPos + LINE_LONG_ARC_OFFSET);
+		ArcParameter lineLabel = new ArcParameter(radius - LINE_LABEL_ARC_OFFSET, xPos + LINE_LABEL_ARC_OFFSET,
+				yPos + LINE_LABEL_ARC_OFFSET);
+
+		this.drawParam = new DrawParameters(xCenterAligned, yCenterAligned, outer, inner, lineStart, lineShort, lineLong,
+				lineLabel);
+
+		// render cached background elements
+		renderBackground(g, contentWidth, contentHeight);
+
 		int baselineOffset = mainFont.getHeight() - mainFont.getBaselinePosition();
-		// Since we do not draw the full background every time, we need to at least redraw the area where the value is.
-		drawBackgroundForValue(g, param, mainFont, baselineOffset);
 
 		g.setColor(unitLabelColor);
-		StringPainter.drawStringAtPoint(g, Integer.toString(drawValue), mainFont, param.xCenterAligned,
-				param.yCenterAligned + baselineOffset, Alignment.HCENTER, Alignment.BOTTOM);
+		StringPainter.drawStringAtPoint(g, Integer.toString(drawValue), mainFont, this.drawParam.xCenterAligned,
+				this.drawParam.yCenterAligned + baselineOffset, Alignment.HCENTER, Alignment.BOTTOM);
 
 		// Draw outer progress arc
 		float angle = GaugeHelper.computeAngleFromValue(drawValue, this.minValue, this.maxValue, 0, ARC_ANGLE);
@@ -483,15 +440,63 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 
 		g.setColor(progressColor);
 
-		int backgroundColor = g.getBackgroundColor();
-		g.removeBackgroundColor(); // Background needs to be removed since lines intersect with inner arc
 		ShapePainter.drawThickFadedCircleArc(g, outer.getXOffset(), outer.getYOffset(), outer.getDiameter(), start,
 				angle, OUTER_ARC_THICKNESS, FADE, CAP, CAP);
-		g.setBackgroundColor(backgroundColor);
+
+
+		int outerRadius = this.drawParam.outer.getRadius();
+
+		ResourceImage icon = this.unitIcon;
+		if (icon != null) {
+			g.setColor(progressColor);
+			Painter.drawImage(g, icon, xCenterAligned - (icon.getWidth() / 2),
+					(int) (yCenterAligned + (outerRadius / UNIT_ICON_OFFSET_DIVIDER)));
+		}
+	}
+
+	private void renderBackground(GraphicsContext g, int contentWidth, int contentHeight) {
+		if (this.cachedDrawings == null) {
+			this.cachedDrawings = new BufferedImage(contentWidth, contentHeight);
+			GraphicsContext cachedGraphicsContext = this.cachedDrawings.getGraphicsContext();
+
+			// Load styles
+			Style style = getStyle();
+
+			Font mainFont = style.getFont();
+			Font arcFont = style.getExtraObject(STYLE_FONT_ARC_LABELS, Font.class, mainFont);
+			Font unitFont = style.getExtraObject(STYLE_FONT_UNIT_LABEL, Font.class, mainFont);
+
+			int valueColor = style.getColor();
+			int progressBgColor = style.getExtraInt(STYLE_COLOR_PROGRESS_BG, DEFAULT_PROGRESS_BG_COLOR);
+			int arcLabelColor = style.getExtraInt(STYLE_COLOR_PROGRESS_BG, DEFAULT_PROGRESS_BG_COLOR);
+			int unitLabelColor = style.getExtraInt(STYLE_COLOR_UNIT_LABEL, valueColor);
+
+			// Draw background color
+			cachedGraphicsContext.setColor(g.getBackgroundColor());
+			Painter.fillRectangle(cachedGraphicsContext, 0, 0, contentWidth, contentHeight);
+
+			DrawParameters param = this.drawParam;
+
+			// Draw inner Arc, lines on inner Arc and labels for long line.
+			renderInnerArc(cachedGraphicsContext, param, arcFont, progressBgColor, arcLabelColor);
+
+			// Draw unit label & icon
+			renderUnit(cachedGraphicsContext, param, unitFont, unitLabelColor);
+
+			// Draw outer arc background
+			assert param != null;
+			ArcParameter outer = param.outer;
+
+			cachedGraphicsContext.setColor(progressBgColor);
+			ShapePainter.drawThickFadedCircleArc(cachedGraphicsContext, outer.getXOffset(), outer.getYOffset(), outer.getDiameter(),
+					START_ANGLE, ARC_ANGLE, OUTER_ARC_THICKNESS, FADE, CAP, CAP);
+		}
+
+		Painter.drawImage(g, this.cachedDrawings, 0, 0);
 	}
 
 	private void renderInnerArc(GraphicsContext g, DrawParameters param, Font arcFont, int progressBgColor,
-			int arcLabelColor) {
+								int arcLabelColor) {
 
 		// Draw lines and labels on inner arc
 		g.setColor(progressBgColor);
@@ -527,7 +532,7 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 		g.setBackgroundColor(backgroundColor);
 	}
 
-	private void renderUnit(GraphicsContext g, DrawParameters param, Font unitFont, int unitColor, int iconColor) {
+	private void renderUnit(GraphicsContext g, DrawParameters param, Font unitFont, int unitColor) {
 		int xCenterAligned = param.xCenterAligned;
 		int yCenterAligned = param.yCenterAligned;
 		int outerRadius = param.outer.getRadius();
@@ -536,25 +541,6 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 		StringPainter.drawStringAtPoint(g, this.unit, unitFont, xCenterAligned,
 				(int) (yCenterAligned + (outerRadius / UNIT_TEXT_OFFSET_DIVIDER)), Alignment.HCENTER,
 				Alignment.VCENTER);
-
-		ResourceImage icon = this.unitIcon;
-		if (icon != null) {
-			g.setColor(iconColor);
-			Painter.drawImage(g, icon, xCenterAligned - (icon.getWidth() / 2),
-					(int) (yCenterAligned + (outerRadius / UNIT_ICON_OFFSET_DIVIDER)));
-		}
-	}
-
-	private void drawBackgroundForValue(GraphicsContext g, DrawParameters param, Font mainFont, int baselineOffset) {
-		int bgWidth = mainFont.stringWidth(Integer.toString(this.maxValue));
-		int bgHeight = mainFont.getHeight() - baselineOffset - MAIN_LABEL_BG_TOP_OFFSET - MAIN_LABEL_BG_BOTTOM_OFFSET;
-
-		int xLabel = Alignment.computeLeftX(bgWidth, param.xCenterAligned, Alignment.HCENTER);
-		int yLabel = Alignment.computeTopY(bgWidth, param.yCenterAligned + baselineOffset + MAIN_LABEL_BG_TOP_OFFSET,
-				Alignment.VCENTER);
-
-		g.setColor(g.getBackgroundColor());
-		Painter.fillRectangle(g, xLabel, yLabel, bgWidth, bgHeight);
 	}
 
 	private static final class DrawParameters {
@@ -567,8 +553,9 @@ public class GaugeWidget extends Widget implements MotionAnimationListener {
 		ArcParameter lineLong;
 		ArcParameter lineLabel;
 
-		DrawParameters(int xCenterAligned, int yCenterAligned, ArcParameter outer, ArcParameter inner,
-				ArcParameter lineStart, ArcParameter lineShort, ArcParameter lineLong, ArcParameter lineLabel) {
+		DrawParameters(int xCenterAligned, int yCenterAligned, ArcParameter outer,			// NOSONAR this class is an internal
+					   ArcParameter inner, ArcParameter lineStart, ArcParameter lineShort,	// NOSONAR helper class and the use of those
+					   ArcParameter lineLong, ArcParameter lineLabel) { 					// NOSONAR parameters is straightforward
 			this.xCenterAligned = xCenterAligned;
 			this.yCenterAligned = yCenterAligned;
 			this.outer = outer;

@@ -1,4 +1,4 @@
-MicroEJ Corp. does not claim any right in the Specification of this file. For the purpose
+﻿MicroEJ Corp. does not claim any right in the Specification of this file. For the purpose
 of this paragraph, Specification means the methods' names and the structure, sequence and 
 organization of the API.
 You are free to use this Specification to make any clean room implementations or

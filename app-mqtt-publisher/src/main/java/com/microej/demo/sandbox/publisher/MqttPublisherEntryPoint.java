@@ -8,9 +8,14 @@ package com.microej.demo.sandbox.publisher;
 
 import java.util.logging.Logger;
 
+import android.net.ConnectivityManager;
+import android.net.Network;
+
 import com.microej.demo.sandbox.sharedinterface.PowerService;
 
 import ej.kf.FeatureEntryPoint;
+import ej.net.PollerConnectivityManager;
+import ej.net.util.connectivity.ConnectivityUtil;
 import ej.service.ServiceFactory;
 
 /**
@@ -22,20 +27,19 @@ public class MqttPublisherEntryPoint implements FeatureEntryPoint {
 
 	private final MqttPublisher mqttPublisher = new MqttPublisher();
 
+	private final ConnectivityManager connectivityManager = new PollerConnectivityManager();
+
 	@Override
 	public void start() {
-		this.mqttPublisher.connect();
+		ConnectivityManager.NetworkCallback callback = new ConnectivityManager.NetworkCallback() {
+			@Override
+			public void onAvailable(Network network) {
+				MqttPublisherEntryPoint.this.mqttPublisher.connect();
+				LOGGER.info("started"); //$NON-NLS-1$
+			}
+		};
 
-		// Obtain PowerService and add MQTT publisher as observer
-		PowerService powerService = ServiceFactory.getService(PowerService.class);
-		if (powerService == null) {
-			LOGGER.severe("Power service not found."); //$NON-NLS-1$
-			return;
-		}
-
-		powerService.addObserver(this.mqttPublisher);
-
-		LOGGER.info("started"); //$NON-NLS-1$
+		ConnectivityUtil.registerAndCall(connectivityManager, callback);
 	}
 
 	@Override
@@ -47,7 +51,7 @@ public class MqttPublisherEntryPoint implements FeatureEntryPoint {
 			LOGGER.severe("Power service not found."); //$NON-NLS-1$
 			return;
 		}
-		powerService.removeObserver(this.mqttPublisher);
+		powerService.removeListener(this.mqttPublisher);
 
 		LOGGER.info("stopped"); //$NON-NLS-1$
 	}

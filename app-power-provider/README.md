@@ -3,27 +3,27 @@
 The ``app-power-provider`` application generates random power values that will be provided to the other applications.
 This project implements the shared interface `PowerService` provided by the `sharedinterface` library and registers its implementation when starting.
 
-# Usage
-
-Refer to the ``Usage`` section of the project level [README](../README.rst#Usage) to run this application.
-
 # Requirements
 
-Refer to the ``Requirements`` section of the project level [README](../README.rst#Requirements).
+The requirements for this application are available in the `Requirements` section from the [project level README](../README.rst).
+
+# Usage
+
+Follow the `Usage` section from the [project level README](../README.rst) to run this application.
 
 # Dependencies
 
-_All dependencies are retrieved transitively by MicroEJ Module Manager_.
+_All dependencies are retrieved transitively by Gradle._
 
 # Source
 
-N/A.
+N/A
 
 # Restrictions
 
 None.
 
----
-
-_Copyright 2023-2024 MicroEJ Corp. All rights reserved._  
-_Use of this source code is governed by a BSD-style license that can be found with this software._
+---  
+_Markdown_
+_Copyright 2023-2024 MicroEJ Corp. All rights reserved._   
+_Use of this source code is governed by a BSD-style license that can be found with this software._ 

@@ -12,7 +12,7 @@ import ej.drawing.ShapePainter.Cap;
 import ej.microui.display.Font;
 import ej.microui.display.GraphicsContext;
 import ej.mwt.util.Alignment;
-import ej.widget.util.render.StringPainter;
+import ej.widget.render.StringPainter;
 
 /**
  * Helper class containing several static methods for calculations and drawing of the gauge.

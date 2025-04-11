@@ -1,13 +1,13 @@
 /*
  * Java
  *
- * Copyright 2023 MicroEJ Corp. All rights reserved.
+ * Copyright 2023-2024 MicroEJ Corp. All rights reserved.
  * Use of this source code is governed by a BSD-style license that can be found with this software.
  */
 package com.microej.demo.sandbox.sharedinterface;
 
 /**
- * Shared interface to access power data and notify observers.
+ * Shared interface to access power data and notify listeners.
  */
 public interface PowerService {
 
@@ -33,24 +33,24 @@ public interface PowerService {
 	int getMaxPower();
 
 	/**
-	 * Notifies the observers when the power value is changed.
+	 * Notifies the listeners when the power value is changed.
 	 */
-	void notifyObservers();
+	void notifyListeners();
 
 	/**
-	 * Adds a new observer.
+	 * Adds a new listener.
 	 *
-	 * @param observer
-	 *            observer to add
+	 * @param listener
+	 *            listener to add
 	 */
-	void addObserver(Observer observer);
+	void addListener(PowerServiceListener listener);
 
 	/**
-	 * Removes an observer from the set of observers of this observable.
+	 * Removes a listener from the set of listeners of this observable.
 	 *
-	 * @param observer
-	 *            observer to remove
+	 * @param listener
+	 *            listener to remove
 	 */
-	void removeObserver(Observer observer);
+	void removeListener(PowerServiceListener listener);
 
 }

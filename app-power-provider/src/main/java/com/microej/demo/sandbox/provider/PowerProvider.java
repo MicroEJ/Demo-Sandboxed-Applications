@@ -1,7 +1,7 @@
 /*
  * Java
  *
- * Copyright 2023-2024 MicroEJ Corp. All rights reserved.
+ * Copyright 2023-2025 MicroEJ Corp. All rights reserved.
  * Use of this source code is governed by a BSD-style license that can be found with this software.
  */
 package com.microej.demo.sandbox.provider;
@@ -9,8 +9,8 @@ package com.microej.demo.sandbox.provider;
 import java.util.Random;
 import java.util.logging.Logger;
 
-import com.microej.demo.sandbox.sharedinterface.Observer;
 import com.microej.demo.sandbox.sharedinterface.PowerService;
+import com.microej.demo.sandbox.sharedinterface.PowerServiceListener;
 
 import ej.annotation.Nullable;
 import ej.basictool.ArrayTools;
@@ -28,14 +28,14 @@ public class PowerProvider implements PowerService {
 	private static final int MAX_POWER = 2000;
 	private static final int REFRESH_RATE_IN_MS = 4000;
 
-	private static final Random RANDOM = new Random();
+	private static final Random RANDOM = new Random(); // NOSONAR the random is generated for the demo purpose, it is not unsafe to use it
 	private final Timer timer;
 	private int power;
 
 	@Nullable
 	private TimerTask powerProviderTask;
 
-	private Observer[] observers = new Observer[0];
+	private PowerServiceListener[] listeners = new PowerServiceListener[0];
 
 	/**
 	 * Creates a PowerProvider.
@@ -52,7 +52,7 @@ public class PowerProvider implements PowerService {
 			@Override
 			public void run() {
 				updatePower();
-				notifyObservers();
+				notifyListeners();
 			}
 		};
 		this.timer.schedule(this.powerProviderTask, 0, REFRESH_RATE_IN_MS);
@@ -66,6 +66,7 @@ public class PowerProvider implements PowerService {
 			this.powerProviderTask.cancel();
 			this.powerProviderTask = null;
 		}
+		notifyListeners();
 	}
 
 	private void updatePower() {
@@ -90,25 +91,25 @@ public class PowerProvider implements PowerService {
 	}
 
 	@Override
-	public void notifyObservers() {
-		for (Observer observer : this.observers) {
-			observer.update();
+	public void notifyListeners() {
+		for (PowerServiceListener listener : this.listeners) {
+			listener.update();
 		}
 	}
 
 	@Override
-	public void addObserver(Observer observer) {
-		Observer[] observers = this.observers;
-		if (!ArrayTools.contains(observers, observer)) {
-			this.observers = ArrayTools.add(observers, observer);
+	public void addListener(PowerServiceListener listener) {
+		PowerServiceListener[] listeners = this.listeners;
+		if (!ArrayTools.contains(listeners, listener)) {
+			this.listeners = ArrayTools.add(listeners, listener);
 		} else {
-			throw new IllegalArgumentException("Observer is already added."); //$NON-NLS-1$
+			throw new IllegalArgumentException("Listener is already added."); //$NON-NLS-1$
 		}
 	}
 
 	@Override
-	public void removeObserver(Observer observer) {
-		this.observers = ArrayTools.remove(this.observers, observer);
+	public void removeListener(PowerServiceListener listener) {
+		this.listeners = ArrayTools.remove(this.listeners, listener);
 	}
 
 }

@@ -12,6 +12,7 @@ import ej.microui.display.Font;
 public class Fonts {
 
 	private static final String SOURCE_12_400 = "/fonts/SourceSansPro_12px-400.ejf"; //$NON-NLS-1$
+	private static final String SOURCE_22_400 = "/fonts/SourceSansPro_22px-400.ejf"; //$NON-NLS-1$
 	private static final String SOURCE_82_700 = "/fonts/SourceSansPro_82px-700.ejf"; //$NON-NLS-1$
 
 	/**
@@ -35,6 +36,22 @@ public class Fonts {
 	 */
 	public static Font getSourceSansPro12px400() {
 		return Font.getFont(SOURCE_12_400);
+	}
+
+	/**
+	 * Gets the Source Sans Pro font with a height of 22px and a weight of 400 (Regular).
+	 * <p>
+	 * Height (Cap to descender): 22<br>
+	 * Font-weight: 400<br>
+	 * Height: 30<br>
+	 * Baseline: 24<br>
+	 * Space size: 8<br>
+	 *
+	 * @return the font with the settings given above.
+	 *
+	 */
+	public static Font getSourceSansPro22px400() {
+		return Font.getFont(SOURCE_22_400);
 	}
 
 	/**

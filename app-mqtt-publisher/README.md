@@ -2,14 +2,18 @@
 
 The ``app-mqtt-publisher`` application publishes the power values to a MQTT topic.
 
+# Requirements
+
+The requirements for this application are available in the `Requirements` section from the [project level README](../README.rst).
+
 # Usage
+
+Follow the `Usage` section from the [project level README](../README.rst) to run this application.
 
 The data publisher application implements a subscriber which listens to the MQTT topic, reads the incoming message and prints it to the console.
 The data publisher application targets an existing MicroEJ test broker which can be immediately used as is. It is available under the address `tcp://test.mosquitto.org:1883`.
 
 A custom MQTT tool and broker can also be used instead of the pre-configured ones.
-
-Refer to the ``Usage`` section of the project level [README](../README.rst#Usage) to run this application.
 
 ## Monitoring the Published Data
 
@@ -30,23 +34,19 @@ If you're looking to establish MQTT communication using your preferred tool, fol
     - To set your own topic in the publisher application edit the constant `TOPIC_POWER` in `EntryPoint.java`.
 4. Publish data to the topic. The publisher application does also subscribe to the same topic it publishes to. This means you will see any messages you publish with your MQTT tool in the console output of the application.
 
-# Requirements
-
-Refer to the ``Requirements`` section of the project level [README](../README.rst#Requirements).
-
 # Dependencies
 
-_All dependencies are retrieved transitively by MicroEJ Module Manager_.
+_All dependencies are retrieved transitively by Gradle._
 
 # Source
 
-N/A.
+N/A
 
 # Restrictions
 
 None.
 
----
-
-_Copyright 2023-2024 MicroEJ Corp. All rights reserved._  
-_Use of this source code is governed by a BSD-style license that can be found with this software._
+---  
+_Markdown_
+_Copyright 2023-2024 MicroEJ Corp. All rights reserved._   
+_Use of this source code is governed by a BSD-style license that can be found with this software._  

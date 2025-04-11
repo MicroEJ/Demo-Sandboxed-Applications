@@ -24,14 +24,6 @@ public class GuiEntryPoint implements FeatureEntryPoint {
 	@Override
 	public void start() {
 		this.ui.show();
-
-		PowerService powerService = ServiceFactory.getService(PowerService.class);
-		if (powerService == null) {
-			LOGGER.severe("Power service not found."); //$NON-NLS-1$
-			return;
-		}
-
-		powerService.addObserver(this.ui);
 		LOGGER.info("started"); //$NON-NLS-1$
 	}
 
@@ -39,10 +31,10 @@ public class GuiEntryPoint implements FeatureEntryPoint {
 	public void stop() {
 		PowerService powerService = ServiceFactory.getService(PowerService.class);
 		if (powerService == null) {
-			LOGGER.severe("Power service not found."); //$NON-NLS-1$
+			LOGGER.warning("Power service not found."); //$NON-NLS-1$
 			return;
 		}
-		powerService.removeObserver(this.ui);
+		powerService.removeListener(this.ui);
 
 		LOGGER.info("stopped"); //$NON-NLS-1$
 	}
